@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Dodecaëder A5 - PWA versie 2.0</title>
+  <meta name="theme-color" content="#17364c">
+  <meta name="description" content="Interactieve visualisatie van de rotatiegroep A5 van een regelmatige dodecaëder.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="A5 Dodecaëder">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    :root{--ink:#17364c;--line:#b9ccd9;--accent:#f2ba48;--panel:#fff;--screen:#17364c}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:linear-gradient(#f8fbfd,#e8f1f6);font:16px system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
+    main{width:min(1220px,100%);margin:auto;padding:16px}
+    h1{text-align:center;margin:5px;font-size:clamp(1.65rem,4vw,2.45rem)}
+    .sub{text-align:center;color:#587386;margin:5px 0 16px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:17px;box-shadow:0 8px 25px rgba(35,51,68,.14)}
+    .dice{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:15px}
+    .pane{text-align:center;min-width:0}.pane h2{font-size:1rem;margin:.5rem 0}
+    .wrap{height:clamp(330px,40vw,510px);background:radial-gradient(circle,#fff,#e3edf4);border:1px solid #d0dfe9;border-radius:14px;overflow:hidden}
+    canvas{width:100%;height:100%;display:block}
+    .badge{display:inline-block;margin-top:8px;background:#e9f2f8;border-radius:99px;padding:7px 13px;font-weight:700;max-width:100%;overflow-wrap:anywhere}
+    .xray{margin:14px 0;padding:14px 18px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}.xray input{width:100%;accent-color:#315f86}
+    .calc{display:grid;grid-template-columns:1.45fr 1fr;gap:15px;padding:15px}
+    .box{border:1px solid var(--line);border-radius:14px;padding:14px}.chooser{display:grid;grid-template-columns:1fr auto;gap:9px;margin-top:12px}
+    select,button{min-height:44px;border:1px solid #89a9bf;border-radius:12px;background:linear-gradient(#fff,#e7f0f6);font-weight:700;color:var(--ink)}
+    select{width:100%;padding:0 10px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+    button{cursor:pointer;padding:0 16px}button:hover{background:#dceaf3}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}.primary{background:var(--accent)}
+    .screen{border-radius:14px;padding:16px;background:var(--screen);color:#edfaff;font:15px ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.7;overflow-wrap:anywhere}.dim{color:#a9c8d9}.status{color:#c9e7f5;min-height:1.5em}
+    .hint{margin:.65rem 0 0;color:#587386;font-size:.9rem}.pwa-tools{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin:0 0 14px}.exercise{margin:14px 0;padding:14px 18px}.exercise-grid{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.exercise p{margin:.35rem 0}.exercise-actions{display:flex;gap:9px;flex-wrap:wrap}.install-note{text-align:center;color:#587386;font-size:.85rem;margin:6px 0 0}@media print{.pwa-tools,.xray,.chooser,.actions,.exercise-actions,.install-note{display:none!important}body{background:white}.card{box-shadow:none}}
+    @media(max-width:760px){main{padding:8px}.exercise-grid{grid-template-columns:1fr}.dice,.calc{grid-template-columns:1fr}.wrap{height:360px}.chooser{grid-template-columns:1fr}.xray{grid-template-columns:1fr auto}.xray input{grid-column:1/-1;grid-row:2}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Symmetriegroep van een regelmatige dodecaëder</h1>
+  <p class="sub">Rotatiegroep A₅ · 60 rotaties · PWA versie 2.0</p>
+  <div class="pwa-tools"><button id="install" hidden>Installeer app</button><button id="print">Exporteer / print als PDF</button></div>
+  <p id="installNote" class="install-note">De app werkt na het eerste bezoek ook offline.</p>
+  <section class="card dice">
+    <article class="pane"><h2>Referentieoriëntatie</h2><div class="wrap"><canvas id="left" aria-label="Dodecaëder in referentieoriëntatie"></canvas></div><div class="badge">T = e</div></article>
+    <article class="pane"><h2>Actuele stand</h2><div class="wrap"><canvas id="right" aria-label="Getransformeerde dodecaëder"></canvas></div><div class="badge">Transformatie T = <span id="tv">e</span></div></article>
+  </section>
+  <section class="card xray"><b>Röntgenmodus</b><input id="xr" type="range" min="0" max="100" value="25"><output id="xrv">25%</output></section>
+  <section class="card exercise">
+    <div class="exercise-grid">
+      <div><b>Oefenmodus</b><p id="exerciseText">Genereer een opdracht om conjugatie en rotaties te oefenen.</p></div>
+      <div class="exercise-actions"><button id="newExercise">Nieuwe oefening</button><button id="showAnswer">Toon antwoord</button></div>
+    </div>
+  </section>
+  <section class="card calc">
+    <div class="box">
+      <b>Groepselementen van A₅</b>
+      <div class="chooser"><select id="elementSelect" aria-label="Kies een rotatie"></select><button id="add">Voeg toe</button></div>
+      <p class="hint">De notatie beschrijft de permutatie van de twaalf genummerde vlakken.</p>
+      <div class="actions"><button class="primary" id="go">Bereken</button><button id="clear">Wis invoer</button><button id="reset">Reset dodecaëder</button></div>
+    </div>
+    <div class="screen">
+      <div><span class="dim">Aantal rotaties:</span> <span id="count">—</span></div>
+      <div><span class="dim">Invoer:</span> <span id="inp">—</span></div>
+      <div><span class="dim">Product P:</span> <span id="prod">—</span></div>
+      <div><span class="dim">T =</span> <span id="st">e</span></div>
+      <div id="msg" class="status" aria-live="polite"></div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  'use strict';
+  const add=(a,b)=>a.map((x,i)=>x+b[i]), sub=(a,b)=>a.map((x,i)=>x-b[i]), sc=(a,s)=>a.map(x=>x*s);
+  const dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0), cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  const norm=a=>{const m=Math.hypot(...a);return a.map(x=>x/m)}, dist=(a,b)=>Math.hypot(...sub(a,b));
+  const mv=(M,v)=>M.map(r=>dot(r,v));
+  const mm=(A,B)=>A.map(r=>[0,1,2].map(c=>r[0]*B[0][c]+r[1]*B[1][c]+r[2]*B[2][c]));
+  const tr=A=>A[0].map((_,c)=>A.map(r=>r[c]));
+  const I=[[1,0,0],[0,1,0],[0,0,1]];
+  function axisRotation(axis,angle){const [x,y,z]=norm(axis),c=Math.cos(angle),s=Math.sin(angle),t=1-c;return [[t*x*x+c,t*x*y-s*z,t*x*z+s*y],[t*x*y+s*z,t*y*y+c,t*y*z-s*x],[t*x*z-s*y,t*y*z+s*x,t*z*z+c]]}
+  function keyM(M){return M.flat().map(x=>Math.round(x*1e7)).join(',')}
+  function sameM(A,B){let e=0;for(let r=0;r<3;r++)for(let c=0;c<3;c++)e=Math.max(e,Math.abs(A[r][c]-B[r][c]));return e<1e-6}
+
+  // De dodecaëder wordt als duale veelvlak van een icosaëder geconstrueerd.
+  const phi=(1+Math.sqrt(5))/2;
+  const ico=[];
+  for(const a of [-1,1])for(const b of [-phi,phi])ico.push([0,a,b]);
+  for(const a of [-1,1])for(const b of [-phi,phi])ico.push([a,b,0]);
+  for(const a of [-phi,phi])for(const b of [-1,1])ico.push([a,0,b]);
+  for(let i=0;i<ico.length;i++)ico[i]=norm(ico[i]);
+  let edge=Infinity;for(let i=0;i<12;i++)for(let j=i+1;j<12;j++)edge=Math.min(edge,dist(ico[i],ico[j]));
+  const icoFaces=[];
+  for(let a=0;a<12;a++)for(let b=a+1;b<12;b++)for(let c=b+1;c<12;c++)if(Math.abs(dist(ico[a],ico[b])-edge)<1e-5&&Math.abs(dist(ico[a],ico[c])-edge)<1e-5&&Math.abs(dist(ico[b],ico[c])-edge)<1e-5)icoFaces.push([a,b,c]);
+  const vertices=icoFaces.map(f=>norm(sc(add(add(ico[f[0]],ico[f[1]]),ico[f[2]]),1/3)));
+  const faces=ico.map((axis,faceIndex)=>{
+    const adjacent=[];icoFaces.forEach((f,i)=>{if(f.includes(faceIndex))adjacent.push(i)});
+    const helper=Math.abs(axis[2])<.9?[0,0,1]:[0,1,0],u=norm(cross(helper,axis)),v=norm(cross(axis,u));
+    adjacent.sort((i,j)=>Math.atan2(dot(vertices[i],v),dot(vertices[i],u))-Math.atan2(dot(vertices[j],v),dot(vertices[j],u)));
+    const p=adjacent.map(i=>vertices[i]);
+    if(dot(cross(sub(p[1],p[0]),sub(p[2],p[0])),axis)<0)adjacent.reverse();
+    return adjacent;
+  });
+
+  // Twee generatoren leveren de volledige rotatiegroep van de dodecaëder.
+  const generators=[axisRotation(ico[0],2*Math.PI/5),axisRotation(vertices[0],2*Math.PI/3)];
+  const rotations=[];const queue=[];
+  function addRotation(M){if(rotations.some(R=>sameM(R,M)))return false;rotations.push(M);queue.push(M);return true}
+  addRotation(I);while(queue.length){const A=queue.shift();for(const G of [...generators,...generators.map(tr)])addRotation(mm(G,A));if(rotations.length>60)throw Error('Te veel rotaties gegenereerd')}
+  if(rotations.length!==60)throw Error(`Verwacht 60 rotaties, gevonden: ${rotations.length}`);
+
+  // Permutatie van de 12 vlakken en cykelnotatie voor elk groepselement.
+  function facePermutation(M){return ico.map(n=>{const q=mv(M,n);let best=0,bestDot=-Infinity;ico.forEach((m,j)=>{const d=dot(q,m);if(d>bestDot){bestDot=d;best=j}});return best})}
+  function cycleNotation(p){const seen=Array(p.length).fill(false),cycles=[];for(let i=0;i<p.length;i++){if(seen[i]||p[i]===i){seen[i]=true;continue}const cyc=[];let j=i;while(!seen[j]){seen[j]=true;cyc.push(j+1);j=p[j]}cycles.push('('+cyc.join(' ')+')')}return cycles.join('')||'e'}
+  const elements=rotations.map((matrix,index)=>({matrix,perm:facePermutation(matrix),label:'',index}));
+  elements.forEach(e=>e.label=cycleNotation(e.perm));
+  elements.sort((a,b)=>a.label==='e'?-1:b.label==='e'?1:a.label.localeCompare(b.label,undefined,{numeric:true}));
+  elements.forEach((e,i)=>e.index=i);
+  const composePerm=(a,b)=>b.map(x=>a[x]);
+  const inversePerm=p=>{const q=[];p.forEach((x,i)=>q[x]=i);return q};
+  function elementByPerm(p){const e=elements.find(x=>x.perm.every((v,i)=>v===p[i]));if(!e)throw Error('Groepselement niet gevonden');return e}
+  const identity=elementByPerm([...Array(12).keys()]);
+
+  const palette=['#df5357','#3f83cc','#45a36a','#e09b3d','#8d67c5','#38a5a5','#c96eaa','#7488a8','#d16d45','#5d9f48','#496fc1','#b07b45'];
+  const eye=norm([.42,.76,1.31]),up=norm([-.17,1,.09]),cx=norm(cross(up,eye)),cy=norm(cross(eye,cx));
+  let xr=25,input=[],current=identity,displayM=identity.matrix,animation=null,currentExercise=null;
+  const left=document.querySelector('#left'),right=document.querySelector('#right'),select=document.querySelector('#elementSelect');
+  const inp=document.querySelector('#inp'),prod=document.querySelector('#prod'),tv=document.querySelector('#tv'),st=document.querySelector('#st'),msg=document.querySelector('#msg');
+  document.querySelector('#count').textContent=elements.length;
+  elements.forEach((e,i)=>{const o=document.createElement('option');o.value=i;o.textContent=i===0?'e (identiteit)':`${String(i).padStart(2,'0')}: ${e.label}`;select.appendChild(o)});
+
+  function setup(canvas){const d=devicePixelRatio||1,r=canvas.getBoundingClientRect(),w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}return[canvas.getContext('2d'),w,h,d]}
+  function proj(v,w,h,S){return[w/2+dot(v,cx)*S,h*.51-dot(v,cy)*S]}
+  function roundedPath(ctx,p,r){const n=p.length,corners=p.map((b,i)=>{const a=p[(i+n-1)%n],c=p[(i+1)%n],fa=Math.min(r/Math.hypot(...sub(a,b)),.23),fc=Math.min(r/Math.hypot(...sub(c,b)),.23);return{before:add(b,sc(sub(a,b),fa)),vertex:b,after:add(b,sc(sub(c,b),fc))}});ctx.beginPath();ctx.moveTo(...corners[0].before);for(let i=0;i<n;i++){const q=corners[i];ctx.quadraticCurveTo(...q.vertex,...q.after);ctx.lineTo(...corners[(i+1)%n].before)}ctx.closePath()}
+  function rgba(hex,a){const n=parseInt(hex.slice(1),16);return`rgba(${n>>16},${(n>>8)&255},${n&255},${a})`}
+  function drawNumber(ctx,label,center3,normal,w,h,S,alpha){
+    // Lokale basis in het vlak, georiënteerd voor lezen vanaf de buitenzijde.
+    let u3=cross(eye,normal);
+    if(Math.hypot(...u3)<1e-8)u3=cross(cx,normal);
+    u3=norm(u3);
+    let v3=norm(cross(normal,u3));
+    const c=proj(center3,w,h,S);
+    let pu=proj(add(center3,sc(u3,.20)),w,h,S);
+    if(pu[0]<c[0]){u3=sc(u3,-1);pu=proj(add(center3,sc(u3,.20)),w,h,S)}
+    let pv=proj(add(center3,sc(v3,.20)),w,h,S);
+    if(pv[1]<c[1]){v3=sc(v3,-1);pv=proj(add(center3,sc(v3,.20)),w,h,S)}
+    const ux=pu[0]-c[0],uy=pu[1]-c[1],vx=pv[0]-c[0],vy=pv[1]-c[1];
+    ctx.save();ctx.transform(ux,uy,vx,vy,c[0],c[1]);
+    ctx.font='700 1.15px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=.13;
+    ctx.strokeStyle=`rgba(255,255,255,${.72*alpha})`;
+    ctx.fillStyle=`rgba(12,25,34,${.96*alpha})`;
+    ctx.strokeText(label,0,0);ctx.fillText(label,0,0);ctx.restore()
+  }
+  function render(canvas,M){const[ctx,w,h,d]=setup(canvas),rv=vertices.map(v=>mv(M,v)),normals=ico.map(v=>mv(M,v)),S=Math.min(w,h)*.43,p=rv.map(v=>proj(v,w,h,S));ctx.clearRect(0,0,w,h);const list=faces.map((f,i)=>({f,i,depth:dot(normals[i],eye)})).sort((a,b)=>a.depth-b.depth);const x=xr/100;
+    for(const item of list){const pp=item.f.map(k=>p[k]),q3=item.f.map(k=>rv[k]),front=item.depth>0,alpha=Math.max(.04,Math.min(.96,front?.92-x*.46:.035+x*.43));roundedPath(ctx,pp,13*d);const center2=pp.reduce((a,b)=>add(a,b),[0,0]).map(z=>z/5),g=ctx.createRadialGradient(center2[0]-S*.12,center2[1]-S*.12,2,center2[0],center2[1],S*.7);g.addColorStop(0,rgba(palette[item.i],alpha));g.addColorStop(1,rgba('#172832',alpha*.9));ctx.fillStyle=g;ctx.fill();ctx.lineWidth=(front?2.4:1.1)*d;ctx.strokeStyle=`rgba(22,40,51,${front?.78:.18+x*.36})`;ctx.stroke();
+      const center3=q3.reduce((a,b)=>add(a,b),[0,0,0]).map(z=>z/5),normal=norm(normals[item.i]);ctx.save();roundedPath(ctx,pp,13*d);ctx.clip();drawNumber(ctx,String(item.i+1),center3,normal,w,h,S,front?.98:.25+x*.68);ctx.restore();
+    }
+  }
+  function ortho(M){let x=norm([M[0][0],M[1][0],M[2][0]]),y=[M[0][1],M[1][1],M[2][1]];y=norm(sub(y,sc(x,dot(x,y))));const z=cross(x,y);return[[x[0],y[0],z[0]],[x[1],y[1],z[1]],[x[2],y[2],z[2]]]}
+  function interpolate(A,B,t){const M=A.map((r,i)=>r.map((x,j)=>x+(B[i][j]-x)*t));return ortho(M)}
+  function frame(now){if(animation){const t=Math.min(1,(now-animation.start)/1500),e=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;displayM=interpolate(animation.from,animation.to,e);if(t>=1){displayM=animation.to;animation=null;msg.textContent='Rotatie voltooid.'}}render(left,identity.matrix);render(right,displayM);requestAnimationFrame(frame)}
+  const STORAGE_KEY='a5-dodecaeder-pwa-v2';
+  function saveState(){
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify({current:current.label,input:input.map(e=>e.label),xr}))}catch(_){}
+  }
+  function restoreState(){
+    try{
+      const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');if(!data)return;
+      const savedCurrent=elements.find(e=>e.label===data.current);if(savedCurrent){current=savedCurrent;displayM=current.matrix;tv.textContent=st.textContent=current.label}
+      if(Array.isArray(data.input))input=data.input.map(label=>elements.find(e=>e.label===label)).filter(Boolean);
+      if(Number.isFinite(data.xr)){xr=Math.max(0,Math.min(100,data.xr));document.querySelector('#xr').value=xr;document.querySelector('#xrv').textContent=xr+'%'}
+    }catch(_){}
+  }
+  function updateInput(){inp.textContent=input.length?input.map(e=>e.label).join(' · '):'—';saveState()}
+  document.querySelector('#add').onclick=()=>{const e=elements[+select.value];input.unshift(e);updateInput();prod.textContent='—';msg.textContent=`${e.label} links toegevoegd.`};
+  document.querySelector('#go').onclick=()=>{if(!input.length){msg.textContent='Kies en voeg eerst minstens één rotatie toe.';return}let p=identity.perm;for(let i=input.length-1;i>=0;i--)p=composePerm(input[i].perm,p);const P=elementByPerm(p);prod.textContent=P.label;
+    const t=current.perm,conjugated=composePerm(composePerm(t,P.perm),inversePerm(t));current=elementByPerm(composePerm(conjugated,t));tv.textContent=st.textContent=current.label;input=[];updateInput();animation={from:displayM,to:current.matrix,start:performance.now()};msg.textContent='Geconjugeerde rotatie tPt⁻¹ wordt uitgevoerd…'};
+  document.querySelector('#clear').onclick=()=>{input=[];updateInput();prod.textContent='—';msg.textContent='Invoer gewist.'};
+  document.querySelector('#reset').onclick=()=>{input=[];current=identity;updateInput();prod.textContent='—';tv.textContent=st.textContent='e';animation={from:displayM,to:identity.matrix,start:performance.now()};msg.textContent='Beginstand hersteld.'};
+  document.querySelector('#xr').oninput=e=>{xr=+e.target.value;document.querySelector('#xrv').textContent=xr+'%';saveState()};
+  document.querySelector('#print').onclick=()=>window.print();
+  document.querySelector('#newExercise').onclick=()=>{
+    const pool=elements.filter(e=>e!==identity),P=pool[Math.floor(Math.random()*pool.length)],t=pool[Math.floor(Math.random()*pool.length)];
+    const answer=elementByPerm(composePerm(composePerm(t.perm,P.perm),inversePerm(t.perm)));
+    currentExercise={P,t,answer};document.querySelector('#exerciseText').textContent=`Bepaal tPt⁻¹ voor P = ${P.label} en t = ${t.label}.`;msg.textContent='Nieuwe oefening gegenereerd.';
+  };
+  document.querySelector('#showAnswer').onclick=()=>{document.querySelector('#exerciseText').textContent=currentExercise?`Antwoord: tPt⁻¹ = ${currentExercise.answer.label}.`:'Genereer eerst een nieuwe oefening.'};
+  let deferredInstallPrompt=null;const installButton=document.querySelector('#install'),installNote=document.querySelector('#installNote');
+  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event;installButton.hidden=false;installNote.textContent='Deze app kan op dit apparaat worden geïnstalleerd.'});
+  installButton.onclick=async()=>{if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;installButton.hidden=true};
+  window.addEventListener('appinstalled',()=>{installNote.textContent='De app is geïnstalleerd.';installButton.hidden=true});
+  if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{installNote.textContent='Offlinefunctie kon niet worden geactiveerd.'}));
+  restoreState();updateInput();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
